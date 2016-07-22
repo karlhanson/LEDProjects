@@ -4,15 +4,16 @@
 // Arduino Pin Definitions
 // =======================
 
-// Button Numbers (Beat Mode & Flashing Red Lights Mode)
-#define MODE_BUTTON_PIN 2  // Pin For Toggling Modes
-
 // Dotstar LED Pins
-#define CLOCK_PIN 13  // Pin for LED Clock (Dotstar)
-#define DATA_PIN 11   // Pin For LED Data (Dotstar)
+#define CLOCK_PIN 11  // Pin for LED Clock (Dotstar)
+#define DATA_PIN 9   // Pin For LED Data (Dotstar)
+#define CLOCK_PIN2 11
+#define DATA_PIN2 13
 
-#define PATTERN_SWITCH_LED_PIN 12      // Onboard LED for Beat Mode
-#define MODE_SWITCH_LED_PIN 13  // Onboard LED for Flashing Mode
+// Number of LED's On Strip (NUM_LEDS % 12 should == 0)
+#define NUM_LEDS 192
+//define NUM_LEDS (5*30)
+#define NUM_STRIPS 2
 
 // ===============
 // HSV Definitions
@@ -31,9 +32,6 @@
 // ==========================
 // LED Strip Size Definitions
 // ==========================
-
-// Number of LED's On Strip (NUM_LEDS % 12 should == 0)
-#define NUM_LEDS (8 * 30)
 
 // Size of a "group" for certain animations.
 #define LED_GROUP_SIZE (NUM_LEDS / 12)
@@ -59,6 +57,7 @@
 
 // The LED's, man!
 CRGB leds[NUM_LEDS];
+CRGB leds2[NUM_LEDS];
 
 // Designates whether the group size is even or odd.
 const boolean IS_GROUP_SIZE_EVEN = LED_GROUP_SIZE % 2 == 0;
@@ -190,7 +189,6 @@ void toggleMode() {
                 break;
         }
         lastModeSwitchTime = millis();
-        digitalWrite(MODE_SWITCH_LED_PIN, HIGH);
     }
     if (currentMode != BEAT_MODE) {
         FastLED.setBrightness(DEFAULT_BRIGHTNESS);
@@ -235,6 +233,7 @@ void beatSyncMultiplesPattern() {
     for(uint16_t i = 0; i < 8; i++) {
         uint16_t index = beatsin16(i * 2, 0, NUM_LEDS);
         leds[index] |= ColorFromPalette(palette, i * 32, MAX_BRIGHTNESS);
+        leds2[index] |= ColorFromPalette(palette, i * 32, MAX_BRIGHTNESS);
     }
 }
 
@@ -255,6 +254,7 @@ void blinkRedLightsPattern() {
     uint16_t i = 0;
     for (i = 0; i < NUM_LEDS; ++i) {
         leds[i] = color;
+        leds2[i] = color;
     }
     lightsOn = !lightsOn;
     delay(100);
@@ -275,8 +275,12 @@ void cometPattern(boolean hsvColors) {
                 getGradientHue(i), MAX_BRIGHTNESS);
             hsv.hue += 16 * offset;
             leds[i] = hsv;
+            leds2[i] = hsv;
         } else {
             leds[i] = ColorFromPalette(
+                rgbPalettes[currentRGBPalette], getGradientHue(i),
+                MAX_BRIGHTNESS);
+            leds2[i] = ColorFromPalette(
                 rgbPalettes[currentRGBPalette], getGradientHue(i),
                 MAX_BRIGHTNESS);
         }
@@ -325,13 +329,18 @@ void convergePattern(boolean hsvColors) {
                     hsv.sat = beatsin8(30, MIN_SAT, MAX_SAT);
                     hsv.hue += 48 * dist;
                     leds[j] = hsv;
+                    leds2[j] = hsv;
                 } else {
                     leds[j] = ColorFromPalette(
+                        rgbPalettes[currentRGBPalette], getGradientHue(j),
+                        DEFAULT_BRIGHTNESS);
+                    leds2[j] = ColorFromPalette(
                         rgbPalettes[currentRGBPalette], getGradientHue(j),
                         DEFAULT_BRIGHTNESS);
                 }
             } else {
                 leds[j] = CRGB::Black;
+                leds2[j] = CRGB::Black;
             }
         }
     }
@@ -371,9 +380,11 @@ void glitterPattern() {
 
     for (uint16_t i = 0; i < NUM_LEDS; ++i) {
         leds[i] = ColorFromPalette(palette, rainbowHue + (i * 3), beat);
+        leds2[i] = ColorFromPalette(palette, rainbowHue + (i * 3), beat);
     }
     if(random8() < 64) {
         leds[random16(NUM_LEDS)] += CRGB::White;
+        leds2[random16(NUM_LEDS)] += CRGB::White;
     }
 }
 
@@ -392,6 +403,8 @@ void pulsingPattern() {
     for(uint16_t i = 0; i < NUM_LEDS; i++) {
         uint8_t brightness = beat - (rainbowHue + (i * 8));
         leds[i] = ColorFromPalette(
+            palette, slowBeat - (rainbowHue + (i * 2)), brightness);
+        leds2[i] = ColorFromPalette(
             palette, slowBeat - (rainbowHue + (i * 2)), brightness);
     }
 }
@@ -412,6 +425,7 @@ void randomSparklesPattern(boolean groupHues) {
         hue = rainbowHue;
     }
     leds[pos] += CHSV(hue + random8(64), DEFAULT_SAT, MAX_BRIGHTNESS);
+    leds2[pos] += CHSV(hue + random8(64), DEFAULT_SAT, MAX_BRIGHTNESS);
 }
 
 
@@ -448,6 +462,7 @@ void twinklePattern() {
             hsv.val = lerp8by8(MIN_BRIGHTNESS, MAX_BRIGHTNESS, beat);
         }
         leds[i] = hsv;
+        leds2[i] = hsv;
     }
 }
 
@@ -503,65 +518,21 @@ void nextPalette() {
 void nextPattern() {
     currentPattern = (currentPattern + 1) % patternsLength;
     lastPatternSwitchTime = millis();
-    digitalWrite(PATTERN_SWITCH_LED_PIN, HIGH);
 }
 
 
-// ======================
-// LED Response Functions
-// ======================
-
-
-/*
- * Turns off a given LED if it's on and it's been at least LED_OFF_DELAY
- * millis since the light turned on.
- */
-void turnOffLED(
-        uint8_t pin, uint8_t currentValue, uint64_t currentTime,
-        uint64_t lastSwitchTime) {
-    if (currentValue == HIGH && currentTime - lastSwitchTime > LED_OFF_DELAY) {
-        digitalWrite(pin, LOW);
-    }
-}
-
-
-/*
- * Turns off LED's if LED_OFF_DELAY millis have passed.
- *
- * LED's are set to turn on when the pattern or mode change - this ensures that
- * the LED's are ultimately turned off.
- */
-void checkAndTurnOffLEDS(
-        uint64_t currentTime, uint8_t patternValue, uint8_t modeValue) {
-    turnOffLED(
-        PATTERN_SWITCH_LED_PIN, patternValue,
-        currentTime, lastPatternSwitchTime);
-    turnOffLED(
-        MODE_SWITCH_LED_PIN, modeValue,
-        currentTime, lastModeSwitchTime);
-}
 
 
 // ======================
 // Main Arduino Functions
 // ======================
 
-
 void setup() {
-    // Sets pin for mode push button
-    pinMode(MODE_BUTTON_PIN, INPUT);
-
-    // Sets onboard LED pins to output on events (new pattern or mode)
-    pinMode(PATTERN_SWITCH_LED_PIN, OUTPUT);
-    pinMode(MODE_SWITCH_LED_PIN, OUTPUT);
-
-    // Attaches interrupts for changing the current animation mode
-    attachInterrupt(
-        digitalPinToInterrupt(MODE_BUTTON_PIN), toggleMode, RISING);
-
-    // Initialize the LED Strip.
-    FastLED.addLeds<DOTSTAR, DATA_PIN, CLOCK_PIN>(
-        leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+    // Initialize the LED Strips.
+    FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB, DATA_RATE_MHZ(7)>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+    if(NUM_STRIPS > 1) {
+      FastLED.addLeds<APA102, DATA_PIN2, CLOCK_PIN2, RGB, DATA_RATE_MHZ(7)>(leds2, NUM_LEDS).setCorrection(TypicalSMD5050);
+    }
 
     // Set the color temperature
     FastLED.setTemperature(CarbonArc);
@@ -572,11 +543,6 @@ void setup() {
 
 
 void loop() {
-    // Check and potentially turn offf LED's
-    checkAndTurnOffLEDS(
-        millis(), digitalRead(PATTERN_SWITCH_LED_PIN),
-        digitalRead(MODE_SWITCH_LED_PIN));
-
     // Do an action based on the current mode
     switch (currentMode) {
         case BEAT_MODE:
