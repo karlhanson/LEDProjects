@@ -355,10 +355,10 @@ void convergePatternHSV() {
 }
 
 void rainbowMe() {
-  // FastLED's built-in rainbow generator
+  // FastLED's built-in rainbow generator  
   uint8_t ledStart = beatsin8(BPM / 2, 0, LED_GROUP_SIZE);
-  fill_rainbow( &leds[ledStart], NUM_LEDS, getGroupHue(0), 10);
-  fill_rainbow( &leds2[ledStart], NUM_LEDS, 255 - getGroupHue(0), 10);
+  fill_rainbow( &leds[ledStart], NUM_LEDS - ledStart - 1, getGroupHue(0), 10);
+  fill_rainbow( &leds2[ledStart], NUM_LEDS - ledStart - 1, 255 - getGroupHue(0), 10);
 }
 
 // =======================
@@ -373,10 +373,10 @@ void rainbowMe() {
  */
 PatternArray patterns = {
     slowRotatePattern,
-    rainbowMe,
     cometPatternHSV,
     cometFlashHSV,
     convergePatternRGB,
+    rainbowMe,
     cometPatternRGB
 };
 
