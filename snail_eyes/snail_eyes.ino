@@ -6,13 +6,13 @@
 
 // Dotstar LED Pins
 #define CLOCK_PIN 11  // Pin for LED Clock (Dotstar)
-#define DATA_PIN 9   // Pin For LED Data (Dotstar)
 #define CLOCK_PIN2 11
-#define DATA_PIN2 13
+#define DATA_PIN 13   // Pin For LED Data (Dotstar)
+#define DATA_PIN2 9
 
 // Number of LED's On Strip (NUM_LEDS % 12 should == 0)
 #define NUM_LEDS 192
-//define NUM_LEDS (5*30)
+//#define NUM_LEDS (4*12)
 #define NUM_STRIPS 2
 
 // ===============
@@ -34,13 +34,13 @@
 // ==========================
 
 // Size of a "group" for certain animations.
-#define LED_GROUP_SIZE (NUM_LEDS / 12)
+#define LED_GROUP_SIZE (NUM_LEDS / 16)
 
 // ========================
 // Time Syncing Definitions
 // ========================
 
-#define BPM 120             // Beat Synced BPM
+#define BPM 122             // Beat Synced BPM
 #define DEBOUNCE_DELAY 200  // Amount of time to wait for debouncing checks
 #define LED_OFF_DELAY 750   // Amount of time to wait before turning off
                             // onboard LED's.
@@ -156,47 +156,6 @@ uint8_t getGroupHue(uint16_t led) {
 }
 
 
-
-// ==========
-// Interrupts
-// ==========
-
-
-/*
- * Debounces and toggles modes using a button.
- *
- * Normal mode simply shows the standard animations.
- *
- * Beat Mode sets FastLED to turn its global brightness to be beat
- * synced to a beat synced sin wave.
- *
- * Flashing Red Mode does exactly what it sounds like, and is likely to get the
- * attention of you, your cat, and just about everyone.
- */
-void toggleMode() {
-    uint64_t interruptTime = millis();
-    if (interruptTime - lastDebounceTime > DEBOUNCE_DELAY) {
-        switch(currentMode) {
-            case NORMAL_MODE:
-                currentMode = BEAT_MODE;
-                break;
-            case BEAT_MODE:
-                currentMode = FLASHING_RED_MODE;
-                break;
-            case FLASHING_RED_MODE:
-            default:
-                currentMode = NORMAL_MODE;
-                break;
-        }
-        lastModeSwitchTime = millis();
-    }
-    if (currentMode != BEAT_MODE) {
-        FastLED.setBrightness(DEFAULT_BRIGHTNESS);
-    }
-    lastDebounceTime = interruptTime;
-}
-
-
 // ============
 // LED Patterns
 // ============
@@ -224,50 +183,65 @@ void toggleMode() {
  */
 
 
-/*
- * Pattern that goes the entire strip in 8 off beat sin waves.
+/* 
+ * Pattern that lights up whole octacat with a gradient of a single color, and slowly rotates that gradient
  */
-void beatSyncMultiplesPattern() {
-    fadeToBlackBy(leds, NUM_LEDS, 20);
-    CRGBPalette16 palette = rgbPalettes[currentRGBPalette];
-    for(uint16_t i = 0; i < 8; i++) {
-        uint16_t index = beatsin16(i * 2, 0, NUM_LEDS);
-        leds[index] |= ColorFromPalette(palette, i * 32, MAX_BRIGHTNESS);
-        leds2[index] |= ColorFromPalette(palette, i * 32, MAX_BRIGHTNESS);
+void slowRotatePattern() {
+    static uint8_t head = 0;
+    CHSV hsv = CHSV(rainbowHue, DEFAULT_SAT, MAX_BRIGHTNESS);
+    CHSV hsv2 = CHSV(255 - rainbowHue, DEFAULT_SAT, MAX_BRIGHTNESS);
+    CHSV hsv3 = CHSV((rainbowHue + 125) % 255, DEFAULT_SAT, MAX_BRIGHTNESS);
+    CHSV hsv4 = CHSV(255 - ((rainbowHue + 125) % 255), DEFAULT_SAT, MAX_BRIGHTNESS);
+    
+    for (uint16_t i = 0; i < NUM_LEDS; i++) {
+      uint8_t curr = (head + i) % NUM_LEDS;
+      CHSV color = (i < NUM_LEDS/2) ? hsv : hsv2;
+      CHSV color2 = (i < NUM_LEDS/2) ? hsv3 : hsv4;
+      color.val = i % (NUM_LEDS/2) + 155;
+      color2.val = i % (NUM_LEDS/2) + 155;
+      leds[curr] = color;
+      leds2[curr] = color2;
     }
+    delay(10);
+
+    head = scale8(beat8(BPM*12), NUM_LEDS);
+
+    uint8_t bright = beatsin8(BPM/2, MIN_BRIGHTNESS * 3 / 4, MAX_BRIGHTNESS);
+    FastLED.setBrightness( bright );
+//
+//    Serial.print("current brightness is: ");
+//    Serial.println(bright);
+
 }
-
-
-/*
- * Pattern which blinks red lights (for use with button).
- */
-void blinkRedLightsPattern() {
-    static boolean lightsOn = true;
-    CRGB color;
-
-    if (lightsOn) {
-        color = CRGB::Red;
-    } else {
-        color = CRGB::Black;
-    }
-
-    uint16_t i = 0;
-    for (i = 0; i < NUM_LEDS; ++i) {
-        leds[i] = color;
-        leds2[i] = color;
-    }
-    lightsOn = !lightsOn;
-    delay(100);
-}
-
 
 /*
  * Pattern which has multiple trails of LED "comets" moving along the strip.
  */
-void cometPattern(boolean hsvColors) {
+void cometPattern(boolean hsvColors, boolean flashWholeBox) {
     static uint8_t offset = 0;
-
+    static uint8_t prevPalette = currentRGBPalette;
+    static uint8_t flashHue = random(256);
+    if(prevPalette != currentRGBPalette) {
+      prevPalette = currentRGBPalette;
+      flashHue = random(256);
+    }
+ 
     fadeToBlackBy(leds, NUM_LEDS, 127);
+    fadeToBlackBy(leds2, NUM_LEDS, 127);
+
+    // flash everything on the beat, all leds lit a varying shade of brightness based on the offset
+    if(flashWholeBox) {
+      if(offset < LED_GROUP_SIZE * 1 / 4 || offset > LED_GROUP_SIZE * 3 / 4) {
+        for (uint16_t i = 0; i < NUM_LEDS; i++) {
+          uint8_t brightness  = beatsin8(BPM*2, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS);
+          CHSV backgroundColor = CHSV(flashHue, MAX_SAT, brightness);
+          leds[i] = backgroundColor;
+          leds2[i] = backgroundColor;
+        }
+      }
+    }
+
+    // otherwise draw the head of the comet in each group (and the above fadeToBlackBy() calls will fade the previous heads)
     for (uint16_t i = offset; i < NUM_LEDS; i += LED_GROUP_SIZE) {
         if (hsvColors) {
             CHSV hsv = ColorFromPalette(
@@ -285,8 +259,16 @@ void cometPattern(boolean hsvColors) {
                 MAX_BRIGHTNESS);
         }
     }
-    offset = (++offset) % LED_GROUP_SIZE;
-    delay(50);
+
+    uint8_t rate = BPM;
+    if(flashWholeBox) {
+      rate = BPM/2; // do half beat to be less distracting
+    }
+    // beat8() gives us a sawtooth wave from 0-255 in our BPM, and we scale that to 0-16,
+    // so the offset will reset to the beginning of an edge of the octocat on the beat (122 bmp)
+    offset = scale8(beat8(rate), LED_GROUP_SIZE);
+
+    delay(10);
 }
 
 
@@ -294,7 +276,7 @@ void cometPattern(boolean hsvColors) {
  * See cometPattern, uses RGB Palettes.
  */
 void cometPatternRGB() {
-    cometPattern(false);
+    cometPattern(false, false);
 }
 
 
@@ -302,7 +284,11 @@ void cometPatternRGB() {
  * See cometPattern, uses HSV Palettes.
  */
 void cometPatternHSV() {
-    cometPattern(true);
+    cometPattern(true, false);
+}
+
+void cometFlashHSV() {
+  cometPattern(false, true);
 }
 
 
@@ -349,7 +335,7 @@ void convergePattern(boolean hsvColors) {
     if (dist == 0) {
         goingOut = !goingOut;
     }
-    delay(75);
+    delay(65);
 }
 
 
@@ -368,104 +354,12 @@ void convergePatternHSV() {
     convergePattern(true);
 }
 
-
-/*
- * Pattern that goes through Octocat Colors with glittering lights and
- * "morphing" like quality.
- */
-void glitterPattern() {
-    uint8_t bpm = 30;
-    uint8_t beat = beatsin8(bpm, 127, MAX_BRIGHTNESS);
-    CRGBPalette16 palette = OctocatColorsPalette_p;
-
-    for (uint16_t i = 0; i < NUM_LEDS; ++i) {
-        leds[i] = ColorFromPalette(palette, rainbowHue + (i * 3), beat);
-        leds2[i] = ColorFromPalette(palette, rainbowHue + (i * 3), beat);
-    }
-    if(random8() < 64) {
-        leds[random16(NUM_LEDS)] += CRGB::White;
-        leds2[random16(NUM_LEDS)] += CRGB::White;
-    }
+void rainbowMe() {
+  // FastLED's built-in rainbow generator
+  uint8_t ledStart = beatsin8(BPM / 2, 0, LED_GROUP_SIZE);
+  fill_rainbow( &leds[ledStart], NUM_LEDS, getGroupHue(0), 10);
+  fill_rainbow( &leds2[ledStart], NUM_LEDS, 255 - getGroupHue(0), 10);
 }
-
-
-/*
- * Beat syncing pattern that pulses in both directions with a varying hue and
- * brightness factor.
- */
-void pulsingPattern() {
-    uint8_t bpm = 30;
-    uint8_t beat = beatsin8(bpm, 64, 255);
-    uint8_t slowBeat = beatsin8(bpm / 10, 64, 255);
-
-    CRGBPalette16 palette = OctocatColorsPalette_p;
-
-    for(uint16_t i = 0; i < NUM_LEDS; i++) {
-        uint8_t brightness = beat - (rainbowHue + (i * 8));
-        leds[i] = ColorFromPalette(
-            palette, slowBeat - (rainbowHue + (i * 2)), brightness);
-        leds2[i] = ColorFromPalette(
-            palette, slowBeat - (rainbowHue + (i * 2)), brightness);
-    }
-}
-
-
-/*
- * Turns on LED's at random, creating a sparkling pattern where LED's slowly
- * fade to black.
- */
-void randomSparklesPattern(boolean groupHues) {
-    uint16_t pos = random16(NUM_LEDS);
-    uint8_t hue;
-
-    fadeToBlackBy(leds, NUM_LEDS, 10);
-    if (groupHues) {
-        hue = getGroupHue(pos);
-    } else {
-        hue = rainbowHue;
-    }
-    leds[pos] += CHSV(hue + random8(64), DEFAULT_SAT, MAX_BRIGHTNESS);
-    leds2[pos] += CHSV(hue + random8(64), DEFAULT_SAT, MAX_BRIGHTNESS);
-}
-
-
-/*
- * See randomSparklesPattern using group index hues.
- */
-void randomSparklesGroupPattern() {
-    randomSparklesPattern(true);
-}
-
-
-/*
- * See randomSparklesPattern using rainbow hues.
- */
-void randomSparklesRainbowPattern() {
-    randomSparklesPattern(false);
-}
-
-
-/*
- * Pattern that twinkles on even and odd lights with changing saturation.
- */
-void twinklePattern() {
-    uint8_t bpm = 30;
-    uint8_t beat = beatsin8(bpm, 0, 255);
-    CHSVPalette16 palette = hsvPalettes[currentHSVPalette];
-    for (uint16_t i = 0; i < NUM_LEDS; ++i) {
-        CHSV hsv = ColorFromPalette(
-            palette, getGroupHue(i), DEFAULT_BRIGHTNESS);
-        hsv.sat = lerp8by8(MIN_SAT, MAX_SAT, beat);
-        if (i % 2 == 0) {
-            hsv.val = lerp8by8(MAX_BRIGHTNESS, MIN_BRIGHTNESS, beat);
-        } else {
-            hsv.val = lerp8by8(MIN_BRIGHTNESS, MAX_BRIGHTNESS, beat);
-        }
-        leds[i] = hsv;
-        leds2[i] = hsv;
-    }
-}
-
 
 // =======================
 // Patterns Initialization
@@ -478,16 +372,12 @@ void twinklePattern() {
  * parameters.
  */
 PatternArray patterns = {
-    randomSparklesGroupPattern,
-    randomSparklesRainbowPattern,
+    slowRotatePattern,
+    rainbowMe,
     cometPatternHSV,
-    cometPatternRGB,
+    cometFlashHSV,
     convergePatternRGB,
-    convergePatternHSV,
-    pulsingPattern,
-    twinklePattern,
-    glitterPattern,
-    beatSyncMultiplesPattern,
+    cometPatternRGB
 };
 
 
@@ -520,7 +410,25 @@ void nextPattern() {
     lastPatternSwitchTime = millis();
 }
 
+void turnOffLights() {
+  // Turn Off The Lights
+  FastLED.clear();
+  FastLED.show();
+}
 
+
+void countUp(int n, int color) {
+  turnOffLights();
+  CHSV randomColor = CHSV(random(256), random(MIN_SAT, MAX_SAT), DEFAULT_BRIGHTNESS);
+  for (int i = 0; i < n; i++) {
+    leds[i] = color;
+    if(NUM_STRIPS > 1) {
+      leds2[i] = randomColor;
+    }
+    FastLED.show();
+    delay(10);
+  }
+}
 
 
 // ======================
@@ -529,9 +437,9 @@ void nextPattern() {
 
 void setup() {
     // Initialize the LED Strips.
-    FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB, DATA_RATE_MHZ(7)>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+    FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, BGR, DATA_RATE_MHZ(7)>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
     if(NUM_STRIPS > 1) {
-      FastLED.addLeds<APA102, DATA_PIN2, CLOCK_PIN2, RGB, DATA_RATE_MHZ(7)>(leds2, NUM_LEDS).setCorrection(TypicalSMD5050);
+      FastLED.addLeds<APA102, DATA_PIN2, CLOCK_PIN2, BGR, DATA_RATE_MHZ(7)>(leds2, NUM_LEDS).setCorrection(TypicalSMD5050);
     }
 
     // Set the color temperature
@@ -539,34 +447,32 @@ void setup() {
 
     // Set the global brightness
     FastLED.setBrightness(DEFAULT_BRIGHTNESS);
+
+    Serial.begin(9600);
 }
 
 
 void loop() {
     // Do an action based on the current mode
-    switch (currentMode) {
-        case BEAT_MODE:
-            FastLED.setBrightness(beatsin8(BPM, 0, MAX_BRIGHTNESS));
-            patterns[currentPattern]();
-            break;
-        case FLASHING_RED_MODE:
-            blinkRedLightsPattern();
-            break;
-        case NORMAL_MODE:
-        default:
-            patterns[currentPattern]();
-            break;
-    }
+    
+    patterns[currentPattern]();
 
     FastLED.show(); // Show the LED's
     FastLED.delay(1000 / FPS);  // Add a global delay at the frame rate.
 
     // Switch patterns every PATTERN_SECS
-    EVERY_N_SECONDS(PATTERN_SECS) { nextPattern(); }
+    EVERY_N_SECONDS(PATTERN_SECS) {
+      Serial.print("running pattern: ");
+      Serial.println(currentPattern); 
+      nextPattern(); 
+    }
 
     // Switch palettes every PALETTE_SECS
     EVERY_N_SECONDS(PALETTE_SECS) { nextPalette(); }
 
     // Increment the "rainbow hue" every RAINBOW_MILLIS milli's.
-    EVERY_N_MILLISECONDS(RAINBOW_MILLIS) { ++rainbowHue; }
+    EVERY_N_MILLISECONDS(RAINBOW_MILLIS) { 
+      ++rainbowHue;
+      rainbowHue %= 255;
+    }
 }
