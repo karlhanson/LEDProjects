@@ -32,28 +32,29 @@
 // Size of a "group" for certain animations.
 #define LED_GROUP_SIZE (NUM_LEDS / 12)
 
-// LED Ball Sizes
-#define XL_BALL_LEDS 11
-#define L_BALL_LEDS 7
-#define M_BALL_LEDS 5
-#define S_BALL_LEDS 4
-#define BALL_SIZES 4
+// LED Orb Sizes
+#define XL_ORB_LEDS 11
+#define L_ORB_LEDS 7
+#define M_ORB_LEDS 5
+#define S_ORB_LEDS 4
+#define ORB_SIZES 4
 
-#define NUM_XL_BALLS 4
-#define NUM_L_BALLS 8
-#define NUM_M_BALLS 8
-#define NUM_S_BALLS 8
+#define NUM_XL_ORBS 4
+#define NUM_L_ORBS 8
+#define NUM_M_ORBS 8
+#define NUM_S_ORBS 8
+#define NUM_ORBS
 
-uint8_t ballSizes[] = {XL_BALL_LEDS, L_BALL_LEDS, M_BALL_LEDS, S_BALL_LEDS};
+uint8_t orbSizes[] = {XL_ORB_LEDS, L_ORB_LEDS, M_ORB_LEDS, S_ORB_LEDS};
 
-// First offset is at end of XL balls
-// Second offset is at end of L balls (after XL's)
-// Third offset is at end of M balls (right before S's at the end)
+// First offset is at end of XL orbs
+// Second offset is at end of L orbs (after XL's)
+// Third offset is at end of M orbs (right before S's at the end)
 // Fourth offset is the end of the strip (end of S's)
-uint16_t ballOffsets[] = {
-    (XL_BALL_LEDS * NUM_XL_BALLS),
-    (XL_BALL_LEDS * NUM_XL_BALLS) + (L_BALL_LEDS * NUM_L_BALLS),
-    NUM_LEDS - (S_BALL_LEDS * NUM_S_BALLS),
+uint16_t orbOffsets[] = {
+    (XL_ORB_LEDS * NUM_XL_ORBS),
+    (XL_ORB_LEDS * NUM_XL_ORBS) + (L_ORB_LEDS * NUM_L_ORBS),
+    NUM_LEDS - (S_ORB_LEDS * NUM_S_ORBS),
     NUM_LEDS
 };
 
@@ -381,35 +382,35 @@ void randomSparklesRainbowPattern() {
 
 void spiralPattern(boolean dynamicDelay, boolean inAndOut) {
     static uint16_t ledOffset = 0;
-    static uint16_t ballSizeOffset = 0;
+    static uint16_t orbSizeOffset = 0;
     static uint8_t lightsOn = 0;
     static boolean inwards = true;
 
-    uint16_t ballSize = ballSizes[ballSizeOffset];
-    uint16_t endOfBall;
+    uint16_t orbSize = orbSizes[orbSizeOffset];
+    uint16_t endOfOrb;
 
     fadeToBlackBy(leds, NUM_LEDS, 31);
 
     if (lightsOn == 0) {
         if (inwards) {
-            endOfBall = ledOffset + ballSize;
-            for (uint16_t i = ledOffset; i < endOfBall; ++i) {
+            endOfOrb = ledOffset + orbSize;
+            for (uint16_t i = ledOffset; i < endOfOrb; ++i) {
                 leds[i] = ColorFromPalette(
                     rgbPalettes[currentRGBPalette], getGradientHue(i),
                     MAX_BRIGHTNESS);
             }
 
-            ledOffset = endOfBall;
-            if (endOfBall >= ballOffsets[ballSizeOffset]) {
-                ballSizeOffset = (++ballSizeOffset) % BALL_SIZES;
+            ledOffset = endOfOrb;
+            if (endOfOrb >= orbOffsets[orbSizeOffset]) {
+                orbSizeOffset = (++orbSizeOffset) % ORB_SIZES;
             }
 
-            if (endOfBall == NUM_LEDS) {
+            if (endOfOrb == NUM_LEDS) {
                 if (inAndOut) {
                     // We flip direction and start going outward
                     inwards = false;
-                    ballSizeOffset = BALL_SIZES - 1;
-                    ledOffset = NUM_LEDS - ballSizes[ballSizeOffset];
+                    orbSizeOffset = ORB_SIZES - 1;
+                    ledOffset = NUM_LEDS - orbSizes[orbSizeOffset];
                 } else {
                     // We start from the beginning
                     ledOffset = 0;
@@ -417,27 +418,27 @@ void spiralPattern(boolean dynamicDelay, boolean inAndOut) {
             }
 
         } else {
-            endOfBall = ledOffset - ballSize;
-            for (uint16_t i = ledOffset; i - 1 >= endOfBall; --i) {
+            endOfOrb = ledOffset - orbSize;
+            for (uint16_t i = ledOffset; i - 1 >= endOfOrb; --i) {
                 leds[i - 1] = ColorFromPalette(
                     rgbPalettes[currentRGBPalette], getGradientHue(i),
                     MAX_BRIGHTNESS);
             }
 
-            ledOffset = endOfBall;
-            if (ballSizeOffset > 0 && endOfBall <= ballOffsets[ballSizeOffset - 1]) {
-                ballSizeOffset = (--ballSizeOffset);
+            ledOffset = endOfOrb;
+            if (orbSizeOffset > 0 && endOfOrb <= orbOffsets[orbSizeOffset - 1]) {
+                orbSizeOffset = (--orbSizeOffset);
             }
 
-            if (endOfBall == 0) {
+            if (endOfOrb == 0) {
                 if (inAndOut) {
                     // We flip direction and start heading inward
                     inwards = true;
-                    ballSizeOffset = 0;
-                    ledOffset = ballSizes[ballSizeOffset];
+                    orbSizeOffset = 0;
+                    ledOffset = orbSizes[orbSizeOffset];
                 } else {
                     // We start from the end (center)
-                    ballSizeOffset = BALL_SIZES - 1;
+                    orbSizeOffset = ORB_SIZES - 1;
                     ledOffset = NUM_LEDS;
                 }
             }
