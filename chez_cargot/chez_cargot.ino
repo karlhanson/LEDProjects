@@ -45,10 +45,22 @@
 #define NUM_M_ORBS 8
 #define NUM_S_ORBS 8
 #define NUM_ORBS ((NUM_XL_ORBS) + (NUM_L_ORBS) + (NUM_M_ORBS) + (NUM_S_ORBS))
+#define NUM_RINGS 4
 
-// TODO: Add comments
+// TODO: Add comments for the rest of the new code.
+// TODO: Fix delay code on comet and converge patterns (low priority - they
+// still look good)
+// TODO: Add more color palettes
+
 uint16_t orbIndexes[NUM_ORBS];
 uint16_t orbSizes[NUM_ORBS];
+
+// XL Ring (0 - 11)
+// L Ring (12 - 21)
+// M Ring (22 - 26)
+// Center (27)
+const uint8_t ringIndexes[] = {0, 12, 22, 27};
+const uint8_t ringSizes[] = {12, 10, 5, 1};
 
 
 // ========================
@@ -370,16 +382,9 @@ void convergePatternHSV() {
 
 
 void flowerOrbPattern(AnimationType animType) {
-    // XL Ring (0 - 11)
-    // L Ring (12 - 21)
-    // M Ring (22 - 26)
-    // Center (27)
-    static const uint8_t numRings = 4;
-    static const uint8_t ringIndexes[] = {0, 12, 22, 27};
-    static const uint8_t ringSizes[] = {12, 10, 5, 1};
     static const uint64_t animationTimeMillis = 150;
     static uint64_t lastTime = 0;
-    static uint8_t ringNum = numRings - 1;
+    static uint8_t ringNum = NUM_RINGS - 1;
 
     uint64_t currentTime = millis();
 
@@ -417,7 +422,7 @@ void flowerOrbPattern(AnimationType animType) {
 
         --ringNum;
         if (startOrb == 0) {
-            ringNum = numRings - 1;
+            ringNum = NUM_RINGS - 1;
         }
         lastTime = currentTime;
     }
@@ -566,6 +571,47 @@ void randomSparklesRainbowPattern() {
 }
 
 
+void ringsPattern(AnimationType animType) {
+    uint8_t phaseOffset;
+
+    for (uint8_t ringNum = 0; ringNum < NUM_RINGS; ++ringNum) {
+        uint8_t startOrb = ringIndexes[ringNum];
+        uint8_t endOrb = startOrb + ringSizes[ringNum];
+        for (uint8_t i = startOrb; i < endOrb; ++i) {
+            uint16_t startLED = orbIndexes[i];
+            uint16_t endLED = startLED + orbSizes[i];
+            for (uint8_t j = startLED; j < endLED; ++j) {
+                phaseOffset = ringNum * 32;
+                switch(animType) {
+                    case RGB_PALETTE_ANIM:
+                        leds[j] = ColorFromPalette(
+                            rgbPalettes[currentRGBPalette],
+                            rainbowHue + (ringNum * 16),
+                            beatsin8(60, 0, MAX_BRIGHTNESS, 0, phaseOffset));
+                        break;
+                    case RAINBOW_ANIM:
+                    default:
+                        leds[j] = ColorFromPalette(
+                            rgbPalettes[currentRGBPalette],
+                            rainbowHue,
+                            beatsin8(60, 0, MAX_BRIGHTNESS, 0, phaseOffset));
+                        break;
+                }
+            }
+        }
+    }
+}
+
+void ringsRainbowPattern() {
+    ringsPattern(RAINBOW_ANIM);
+}
+
+
+void ringsRGBPattern() {
+    ringsPattern(RGB_PALETTE_ANIM);
+}
+
+
 void spiralPattern(boolean dynamicDelay, boolean inAndOut) {
     static uint8_t orbNum = NUM_ORBS - 1;
     static const uint64_t steadyAnimTime = 100;
@@ -690,6 +736,8 @@ PatternArray patterns = {
     randomOrbsRainbowPattern,
     randomSparklesGroupPattern,
     randomSparklesRainbowPattern,
+    ringsRGBPattern,
+    ringsRainbowPattern,
     spiralDynamicInAndOutPattern,
     spiralPatternDynamic,
     spiralPatternSteady,
