@@ -86,6 +86,9 @@ const uint16_t GROUP_CENTER = LED_GROUP_SIZE / 2;
 // Typedef to make function pointer array easier to type.
 typedef void (*PatternArray[])();
 
+typedef enum {
+    RAINBOW_ANIM, GROUP_ANIM, RGB_PALETTE_ANIM, HSV_PALETTE_ANIM
+} AnimationType;
 
 const CHSVPalette16 OctocatColorsPalette_p(
     CHSV(0, DEFAULT_SAT, MAX_BRIGHTNESS),
@@ -209,24 +212,30 @@ void beatSyncMultiplesPattern() {
 /*
  * Pattern which has multiple trails of LED "comets" moving along the strip.
  */
-void cometPattern(boolean hsvColors) {
+void cometPattern(AnimationType animType) {
     static uint16_t offset = 0;
 
     fadeToBlackBy(leds, NUM_LEDS, 127);
     for (uint16_t i = offset; i < NUM_LEDS; i += LED_GROUP_SIZE) {
-        if (hsvColors) {
-            CHSV hsv = ColorFromPalette(
-                hsvPalettes[currentHSVPalette], getGradientHue(i),
-                MAX_BRIGHTNESS);
-            hsv.hue += 16 * offset;
-            leds[i] = hsv;
-        } else {
-            leds[i] = ColorFromPalette(
-                rgbPalettes[currentRGBPalette], getGradientHue(i),
-                MAX_BRIGHTNESS);
+        switch (animType) {
+            case HSV_PALETTE_ANIM:
+                {
+                    CHSV hsv = ColorFromPalette(
+                        hsvPalettes[currentHSVPalette], getGradientHue(i),
+                        MAX_BRIGHTNESS);
+                    hsv.hue += 16 * offset;
+                    leds[i] = hsv;
+                }
+                break;
+            case RGB_PALETTE_ANIM:
+            default:
+                leds[i] = ColorFromPalette(
+                    rgbPalettes[currentRGBPalette], getGradientHue(i),
+                    MAX_BRIGHTNESS);
+                break;
         }
     }
-    offset = (++offset) % LED_GROUP_SIZE;
+    offset = (offset + 1) % LED_GROUP_SIZE;
     delay(50);
 }
 
@@ -235,7 +244,7 @@ void cometPattern(boolean hsvColors) {
  * See cometPattern, uses RGB Palettes.
  */
 void cometPatternRGB() {
-    cometPattern(false);
+    cometPattern(RGB_PALETTE_ANIM);
 }
 
 
@@ -243,14 +252,14 @@ void cometPatternRGB() {
  * See cometPattern, uses HSV Palettes.
  */
 void cometPatternHSV() {
-    cometPattern(true);
+    cometPattern(HSV_PALETTE_ANIM);
 }
 
 
 /*
  * Pattern that starts from individual points and converges with others
  */
-void convergePattern(boolean hsvColors) {
+void convergePattern(AnimationType animType) {
     static uint8_t dist = 0;
     static boolean goingOut = true;
 
@@ -263,17 +272,23 @@ void convergePattern(boolean hsvColors) {
     for (uint16_t i = 0; i < NUM_LEDS; i += LED_GROUP_SIZE) {
         for (uint16_t j = i + start; j <= i + GROUP_CENTER + dist; ++j) {
             if (goingOut) {
-                if (hsvColors) {
-                    CHSV hsv = ColorFromPalette(
-                        hsvPalettes[currentHSVPalette],
-                        getGradientHue(i), DEFAULT_BRIGHTNESS);
-                    hsv.sat = beatsin8(30, MIN_SAT, MAX_SAT);
-                    hsv.hue += 48 * dist;
-                    leds[j] = hsv;
-                } else {
-                    leds[j] = ColorFromPalette(
-                        rgbPalettes[currentRGBPalette], getGradientHue(j),
-                        DEFAULT_BRIGHTNESS);
+                switch (animType) {
+                    case HSV_PALETTE_ANIM:
+                        {
+                            CHSV hsv = ColorFromPalette(
+                                hsvPalettes[currentHSVPalette],
+                                getGradientHue(j), DEFAULT_BRIGHTNESS);
+                            hsv.sat = beatsin8(30, MIN_SAT, MAX_SAT);
+                            hsv.hue += 48 * dist;
+                            leds[j] = hsv;
+                        }
+                        break;
+                    case RGB_PALETTE_ANIM:
+                    default:
+                        leds[j] = ColorFromPalette(
+                            rgbPalettes[currentRGBPalette], getGradientHue(j),
+                            DEFAULT_BRIGHTNESS);
+                        break;
                 }
             } else {
                 leds[j] = CRGB::Black;
@@ -293,7 +308,7 @@ void convergePattern(boolean hsvColors) {
  * See convergePattern, uses RGB Palettes.
  */
 void convergePatternRGB() {
-    convergePattern(false);
+    convergePattern(RGB_PALETTE_ANIM);
 }
 
 
@@ -301,7 +316,7 @@ void convergePatternRGB() {
  * See convergePattern, uses RGB Palettes.
  */
 void convergePatternHSV() {
-    convergePattern(true);
+    convergePattern(HSV_PALETTE_ANIM);
 }
 
 
@@ -346,15 +361,19 @@ void pulsingPattern() {
  * Turns on LED's at random, creating a sparkling pattern where LED's slowly
  * fade to black.
  */
-void randomSparklesPattern(boolean groupHues) {
+void randomSparklesPattern(AnimationType animType) {
     uint16_t pos = random16(NUM_LEDS);
     uint8_t hue;
 
     fadeToBlackBy(leds, NUM_LEDS, 10);
-    if (groupHues) {
-        hue = getGroupHue(pos);
-    } else {
-        hue = rainbowHue;
+    switch(animType) {
+        case GROUP_ANIM:
+            hue = getGroupHue(pos);
+            break;
+        case RAINBOW_ANIM:
+        default:
+            hue = rainbowHue;
+            break;
     }
     leds[pos] += CHSV(hue + random8(64), DEFAULT_SAT, MAX_BRIGHTNESS);
 }
@@ -364,7 +383,7 @@ void randomSparklesPattern(boolean groupHues) {
  * See randomSparklesPattern using group index hues.
  */
 void randomSparklesGroupPattern() {
-    randomSparklesPattern(true);
+    randomSparklesPattern(GROUP_ANIM);
 }
 
 
