@@ -58,10 +58,10 @@ uint16_t orbSizes[NUM_ORBS];
 #define FPS 120             // Frames Per Second
 
 // Amount of time to show each pattern
-#define PATTERN_SECS 20
+#define PATTERN_SECS 24
 
 // Amount of time to show each palette
-#define PALETTE_SECS (PATTERN_SECS / 4)
+#define PALETTE_SECS ((PATTERN_SECS) / 4)
 
 // Amount of time between each hue in rainbow
 #define RAINBOW_MILLIS 20
@@ -472,65 +472,47 @@ void randomSparklesRainbowPattern() {
 
 
 void spiralPattern(boolean dynamicDelay, boolean inAndOut) {
-    static uint16_t ledOffset = 0;
-    static uint16_t orbSizeOffset = 0;
+    static uint8_t orbNum = NUM_ORBS - 1;
     static uint8_t lightsOn = 0;
-    static boolean inwards = true;
+    static boolean inwards = false;
 
-    uint16_t orbSize = orbSizes[orbSizeOffset];
-    uint16_t endOfOrb;
+    uint16_t startLED;
+    uint16_t endLED;
 
     fadeToBlackBy(leds, NUM_LEDS, 31);
 
     if (lightsOn == 0) {
+        startLED = orbIndexes[orbNum];
+        endLED = startLED + orbSizes[orbNum];
+        for (uint16_t i = startLED; i < endLED; ++i) {
+            leds[i] = ColorFromPalette(
+                rgbPalettes[currentRGBPalette], getGradientHue(i),
+                DEFAULT_BRIGHTNESS);
+        }
         if (inwards) {
-            endOfOrb = ledOffset + orbSize;
-            for (uint16_t i = ledOffset; i < endOfOrb; ++i) {
-                leds[i] = ColorFromPalette(
-                    rgbPalettes[currentRGBPalette], getGradientHue(i),
-                    MAX_BRIGHTNESS);
-            }
-
-            ledOffset = endOfOrb;
-            if (endOfOrb >= orbOffsets[orbSizeOffset]) {
-                orbSizeOffset = (++orbSizeOffset) % ORB_SIZES;
-            }
-
-            if (endOfOrb == NUM_LEDS) {
+            ++orbNum;
+            if (endLED == NUM_LEDS) {
                 if (inAndOut) {
-                    // We flip direction and start going outward
+                    // We flip direction and start going outward (no repeat on
+                    // last orb)
                     inwards = false;
-                    orbSizeOffset = ORB_SIZES - 1;
-                    ledOffset = NUM_LEDS - orbSizes[orbSizeOffset];
+                    orbNum = NUM_ORBS - 2;
                 } else {
                     // We start from the beginning
-                    ledOffset = 0;
+                    orbNum = 0;
                 }
             }
 
         } else {
-            endOfOrb = ledOffset - orbSize;
-            for (uint16_t i = ledOffset; i - 1 >= endOfOrb; --i) {
-                leds[i - 1] = ColorFromPalette(
-                    rgbPalettes[currentRGBPalette], getGradientHue(i),
-                    MAX_BRIGHTNESS);
-            }
-
-            ledOffset = endOfOrb;
-            if (orbSizeOffset > 0 && endOfOrb <= orbOffsets[orbSizeOffset - 1]) {
-                orbSizeOffset = (--orbSizeOffset);
-            }
-
-            if (endOfOrb == 0) {
+            --orbNum;
+            if (startLED == 0) {
                 if (inAndOut) {
                     // We flip direction and start heading inward
                     inwards = true;
-                    orbSizeOffset = 0;
-                    ledOffset = orbSizes[orbSizeOffset];
+                    orbNum = 1;
                 } else {
                     // We start from the end (center)
-                    orbSizeOffset = ORB_SIZES - 1;
-                    ledOffset = NUM_LEDS;
+                    orbNum = NUM_ORBS - 1;
                 }
             }
         }
@@ -538,7 +520,7 @@ void spiralPattern(boolean dynamicDelay, boolean inAndOut) {
     lightsOn = (lightsOn + 1) % 4;
 
     if (dynamicDelay) {
-        delay(beatsin8(15, 15, 30));
+        delay(beatsin8(10, 10, 30));
     } else {
         delay(20);
     }
