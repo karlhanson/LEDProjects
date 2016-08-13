@@ -213,14 +213,14 @@ void beatSyncMultiplesPattern() {
  * Pattern which has multiple trails of LED "comets" moving along the strip.
  */
 void cometPattern(boolean hsvColors) {
-    static uint8_t offset = 0;
+    static uint16_t offset = 0;
 
     fadeToBlackBy(leds, NUM_LEDS, 127);
     for (uint16_t i = offset; i < NUM_LEDS; i += LED_GROUP_SIZE) {
         if (hsvColors) {
             CHSV hsv = ColorFromPalette(
-                hsvPalettes[currentHSVPalette],
-                getGradientHue(i), MAX_BRIGHTNESS);
+                hsvPalettes[currentHSVPalette], getGradientHue(i),
+                MAX_BRIGHTNESS);
             hsv.hue += 16 * offset;
             leds[i] = hsv;
         } else {
