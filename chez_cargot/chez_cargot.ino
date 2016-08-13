@@ -379,6 +379,100 @@ void randomSparklesRainbowPattern() {
 }
 
 
+void spiralPattern(boolean dynamicDelay, boolean inAndOut) {
+    static uint16_t ledOffset = 0;
+    static uint16_t ballSizeOffset = 0;
+    static uint8_t lightsOn = 0;
+    static boolean inwards = true;
+
+    uint16_t ballSize = ballSizes[ballSizeOffset];
+    uint16_t endOfBall;
+
+    fadeToBlackBy(leds, NUM_LEDS, 31);
+
+    if (lightsOn == 0) {
+        if (inwards) {
+            endOfBall = ledOffset + ballSize;
+            for (uint16_t i = ledOffset; i < endOfBall; ++i) {
+                leds[i] = ColorFromPalette(
+                    rgbPalettes[currentRGBPalette], getGradientHue(i),
+                    MAX_BRIGHTNESS);
+            }
+
+            ledOffset = endOfBall;
+            if (endOfBall >= ballOffsets[ballSizeOffset]) {
+                ballSizeOffset = (++ballSizeOffset) % BALL_SIZES;
+            }
+
+            if (endOfBall == NUM_LEDS) {
+                if (inAndOut) {
+                    // We flip direction and start going outward
+                    inwards = false;
+                    ballSizeOffset = BALL_SIZES - 1;
+                    ledOffset = NUM_LEDS - ballSizes[ballSizeOffset];
+                } else {
+                    // We start from the beginning
+                    ledOffset = 0;
+                }
+            }
+
+        } else {
+            endOfBall = ledOffset - ballSize;
+            for (uint16_t i = ledOffset; i - 1 >= endOfBall; --i) {
+                leds[i - 1] = ColorFromPalette(
+                    rgbPalettes[currentRGBPalette], getGradientHue(i),
+                    MAX_BRIGHTNESS);
+            }
+
+            ledOffset = endOfBall;
+            if (ballSizeOffset > 0 && endOfBall <= ballOffsets[ballSizeOffset - 1]) {
+                ballSizeOffset = (--ballSizeOffset);
+            }
+
+            if (endOfBall == 0) {
+                if (inAndOut) {
+                    // We flip direction and start heading inward
+                    inwards = true;
+                    ballSizeOffset = 0;
+                    ledOffset = ballSizes[ballSizeOffset];
+                } else {
+                    // We start from the end (center)
+                    ballSizeOffset = BALL_SIZES - 1;
+                    ledOffset = NUM_LEDS;
+                }
+            }
+        }
+    }
+    lightsOn = (++lightsOn) % 4;
+
+    if (dynamicDelay) {
+        delay(beatsin8(15, 15, 30));
+    } else {
+        delay(20);
+    }
+}
+
+
+void spiralPatternSteady() {
+    spiralPattern(false, false);
+}
+
+
+void spiralSteadyInAndOutPattern() {
+    spiralPattern(false, true);
+}
+
+
+void spiralPatternDynamic() {
+    spiralPattern(true, false);
+}
+
+
+void spiralDynamicInAndOutPattern() {
+    spiralPattern(true, true);
+}
+
+
 /*
  * Pattern that twinkles on even and odd lights with changing saturation.
  */
@@ -411,16 +505,20 @@ void twinklePattern() {
  * parameters.
  */
 PatternArray patterns = {
-    randomSparklesGroupPattern,
-    randomSparklesRainbowPattern,
+    beatSyncMultiplesPattern,
     cometPatternHSV,
     cometPatternRGB,
-    convergePatternRGB,
     convergePatternHSV,
-    pulsingPattern,
-    twinklePattern,
+    convergePatternRGB,
     glitterPattern,
-    beatSyncMultiplesPattern,
+    pulsingPattern,
+    randomSparklesGroupPattern,
+    randomSparklesRainbowPattern,
+    spiralDynamicInAndOutPattern,
+    spiralPatternDynamic,
+    spiralPatternSteady,
+    spiralSteadyInAndOutPattern,
+    twinklePattern
 };
 
 
