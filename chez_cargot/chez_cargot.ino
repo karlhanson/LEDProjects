@@ -115,10 +115,6 @@ CRGBPalette16 rgbPalettes[] = {
     OctocatColorsPalette_p, LavaColors_p, PartyColors_p, OceanColors_p
 };
 
-// Represents the current animation mode
-typedef enum {NORMAL_MODE, BEAT_MODE, FLASHING_RED_MODE} AnimationMode;
-AnimationMode currentMode = NORMAL_MODE;
-
 
 // Length of hsvPalettes[]
 const uint16_t hsvPalettesLength = (
@@ -203,7 +199,7 @@ uint8_t getGroupHue(uint16_t led) {
 void beatSyncMultiplesPattern() {
     fadeToBlackBy(leds, NUM_LEDS, 20);
     CRGBPalette16 palette = rgbPalettes[currentRGBPalette];
-    for(uint16_t i = 0; i < 16; i++) {
+    for(uint16_t i = 0; i < 16; ++i) {
         uint16_t index = beatsin16(i * 2, 0, NUM_LEDS);
         leds[index] |= ColorFromPalette(palette, i * 16, MAX_BRIGHTNESS);
     }
@@ -285,7 +281,7 @@ void convergePattern(boolean hsvColors) {
         }
     }
 
-    dist = (++dist) % (maxDist + 1);
+    dist = (dist + 1) % (maxDist + 1);
     if (dist == 0) {
         goingOut = !goingOut;
     }
@@ -333,12 +329,12 @@ void glitterPattern() {
  */
 void pulsingPattern() {
     uint8_t bpm = 30;
-    uint8_t beat = beatsin8(bpm, 64, 255);
+    uint8_t beat = beatsin8(bpm, 64, MAX_BRIGHTNESS);
     uint8_t slowBeat = beatsin8(bpm / 10, 64, 255);
 
     CRGBPalette16 palette = OctocatColorsPalette_p;
 
-    for(uint16_t i = 0; i < NUM_LEDS; i++) {
+    for(uint16_t i = 0; i < NUM_LEDS; ++i) {
         uint8_t brightness = beat - (rainbowHue + (i * 8));
         leds[i] = ColorFromPalette(
             palette, slowBeat - (rainbowHue + (i * 2)), brightness);
@@ -444,7 +440,7 @@ void spiralPattern(boolean dynamicDelay, boolean inAndOut) {
             }
         }
     }
-    lightsOn = (++lightsOn) % 4;
+    lightsOn = (lightsOn + 1) % 4;
 
     if (dynamicDelay) {
         delay(beatsin8(15, 15, 30));
