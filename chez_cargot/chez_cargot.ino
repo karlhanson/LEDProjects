@@ -26,11 +26,12 @@
 // LED Strip Size Definitions
 // ==========================
 
-// Number of LED's On Strip (NUM_LEDS % 12 should == 0)
+// Number of LED's On Strip
 #define NUM_LEDS 172
+#define NUM_GROUPS 19
 
 // Size of a "group" for certain animations.
-#define LED_GROUP_SIZE (NUM_LEDS / 12)
+#define LED_GROUP_SIZE ((NUM_LEDS) / (NUM_GROUPS))
 
 // LED Orb Sizes
 #define XL_ORB_LEDS 11
@@ -43,20 +44,12 @@
 #define NUM_L_ORBS 8
 #define NUM_M_ORBS 8
 #define NUM_S_ORBS 8
-#define NUM_ORBS
+#define NUM_ORBS ((NUM_XL_ORBS) + (NUM_L_ORBS) + (NUM_M_ORBS) + (NUM_S_ORBS))
 
-uint8_t orbSizes[] = {XL_ORB_LEDS, L_ORB_LEDS, M_ORB_LEDS, S_ORB_LEDS};
+// TODO: Add comments
+uint16_t orbIndexes[NUM_ORBS];
+uint16_t orbSizes[NUM_ORBS];
 
-// First offset is at end of XL orbs
-// Second offset is at end of L orbs (after XL's)
-// Third offset is at end of M orbs (right before S's at the end)
-// Fourth offset is the end of the strip (end of S's)
-uint16_t orbOffsets[] = {
-    (XL_ORB_LEDS * NUM_XL_ORBS),
-    (XL_ORB_LEDS * NUM_XL_ORBS) + (L_ORB_LEDS * NUM_L_ORBS),
-    NUM_LEDS - (S_ORB_LEDS * NUM_S_ORBS),
-    NUM_LEDS
-};
 
 // ========================
 // Time Syncing Definitions
@@ -155,7 +148,7 @@ uint8_t getGradientHue(uint16_t led) {
 /*
  * Returns a hue index that corresponds to the group index of the given LED.
  *
- * There are always 12 groups, and each group number corresponds to a value
+ * There are NUM_GROUPS groups, and each group number corresponds to a value
  * over [0, 255]; this function returns the discrete value that corresponds
  * with a given LED's group. For example, if LED_GROUP_SIZE == 15, led
  * indexes [0, 14] would all return the same value, and the next hue starts at
@@ -165,7 +158,36 @@ uint8_t getGradientHue(uint16_t led) {
  * Returns: 0 <= groupHue <= 255
  */
 uint8_t getGroupHue(uint16_t led) {
-    return ((led / LED_GROUP_SIZE) * 255) / 11;
+    return ((led / LED_GROUP_SIZE) * 255) / (NUM_GROUPS - 1);
+}
+
+
+void setupOrbIndexes() {
+    uint8_t orbSizeTypes[] = {XL_ORB_LEDS, L_ORB_LEDS, M_ORB_LEDS, S_ORB_LEDS};
+
+    // First offset is at end of XL orbs
+    // Second offset is at end of L orbs (after XL's)
+    // Third offset is at end of M orbs (right before S's at the end)
+    // Fourth offset is the end of the strip (end of S's)
+    uint16_t orbOffsets[] = {
+        (XL_ORB_LEDS * NUM_XL_ORBS),
+        (XL_ORB_LEDS * NUM_XL_ORBS) + (L_ORB_LEDS * NUM_L_ORBS),
+        NUM_LEDS - (S_ORB_LEDS * NUM_S_ORBS),
+        NUM_LEDS
+    };
+
+    uint8_t currentLED = 0;
+    uint8_t currentOffset = 0;
+    uint8_t increment;
+    for (uint8_t i = 0; i < NUM_ORBS; ++i) {
+        increment = orbSizeTypes[currentOffset];
+        orbIndexes[i] = currentLED;
+        orbSizes[i] = increment;
+        currentLED += increment;
+        if (currentLED >= orbOffsets[currentOffset]) {
+            ++currentOffset;
+        }
+    }
 }
 
 
@@ -270,7 +292,8 @@ void convergePattern(AnimationType animType) {
         --maxDist;
     }
     for (uint16_t i = 0; i < NUM_LEDS; i += LED_GROUP_SIZE) {
-        for (uint16_t j = i + start; j <= i + GROUP_CENTER + dist; ++j) {
+        for (uint16_t j = i + start;
+                j <= i + GROUP_CENTER + dist && j < NUM_LEDS; ++j) {
             if (goingOut) {
                 switch (animType) {
                     case HSV_PALETTE_ANIM:
@@ -357,6 +380,59 @@ void pulsingPattern() {
 }
 
 
+void randomOrbsPattern(AnimationType animType) {
+    static uint8_t lastOrb = 0;
+    static uint8_t lightsOn = 0;
+
+    fadeToBlackBy(leds, NUM_LEDS, 31);
+
+    if (lightsOn == 0) {
+        uint8_t orb = random8(NUM_ORBS);
+        while (orb == lastOrb) {
+            orb = random8(NUM_ORBS);
+        }
+        uint16_t startLED = orbIndexes[orb];
+        uint16_t endLED = startLED + orbSizes[orb];
+
+        for (uint16_t i = startLED; i < endLED; ++i) {
+            switch (animType) {
+                case RAINBOW_ANIM:
+                    leds[i] += CHSV(
+                        rainbowHue + random8(64), DEFAULT_SAT,
+                        MAX_BRIGHTNESS);
+                    break;
+                case GROUP_ANIM:
+                    leds[i] += CHSV(
+                        getGroupHue(startLED) + random8(64), DEFAULT_SAT,
+                        MAX_BRIGHTNESS);
+                    break;
+                case RGB_PALETTE_ANIM:
+                default:
+                    leds[i] = ColorFromPalette(
+                        rgbPalettes[currentRGBPalette], getGradientHue(i),
+                        MAX_BRIGHTNESS);
+                    break;
+            }
+        }
+        lastOrb = orb;
+    }
+
+    lightsOn = (lightsOn + 1) % 4;
+    delay(25);
+}
+
+void randomOrbsRainbowPattern() {
+    randomOrbsPattern(RAINBOW_ANIM);
+}
+
+void randomOrbsGroupPattern() {
+    randomOrbsPattern(GROUP_ANIM);
+}
+
+void randomOrbsRGBPalettePattern() {
+    randomOrbsPattern(RGB_PALETTE_ANIM);
+}
+
 /*
  * Turns on LED's at random, creating a sparkling pattern where LED's slowly
  * fade to black.
@@ -391,7 +467,7 @@ void randomSparklesGroupPattern() {
  * See randomSparklesPattern using rainbow hues.
  */
 void randomSparklesRainbowPattern() {
-    randomSparklesPattern(false);
+    randomSparklesPattern(RAINBOW_ANIM);
 }
 
 
@@ -528,6 +604,9 @@ PatternArray patterns = {
     convergePatternRGB,
     glitterPattern,
     pulsingPattern,
+    randomOrbsGroupPattern,
+    randomOrbsRGBPalettePattern,
+    randomOrbsRainbowPattern,
     randomSparklesGroupPattern,
     randomSparklesRainbowPattern,
     spiralDynamicInAndOutPattern,
@@ -581,6 +660,8 @@ void setup() {
 
     // Set the global brightness
     FastLED.setBrightness(DEFAULT_BRIGHTNESS);
+
+    setupOrbIndexes();
 }
 
 
