@@ -449,7 +449,7 @@ void nextPalette() {
  * FastLED in order to dynamically change patterns.
  */
 void nextPattern() {
-    currentPattern = (currentPattern + 1) % patternsLength;
+    currentPattern = random8(patternsLength);
 }
 
 
