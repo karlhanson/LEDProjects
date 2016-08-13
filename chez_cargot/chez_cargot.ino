@@ -27,10 +27,35 @@
 // ==========================
 
 // Number of LED's On Strip (NUM_LEDS % 12 should == 0)
-#define NUM_LEDS 216
+#define NUM_LEDS 172
 
 // Size of a "group" for certain animations.
 #define LED_GROUP_SIZE (NUM_LEDS / 12)
+
+// LED Ball Sizes
+#define XL_BALL_LEDS 11
+#define L_BALL_LEDS 7
+#define M_BALL_LEDS 5
+#define S_BALL_LEDS 4
+#define BALL_SIZES 4
+
+#define NUM_XL_BALLS 4
+#define NUM_L_BALLS 8
+#define NUM_M_BALLS 8
+#define NUM_S_BALLS 8
+
+uint8_t ballSizes[] = {XL_BALL_LEDS, L_BALL_LEDS, M_BALL_LEDS, S_BALL_LEDS};
+
+// First offset is at end of XL balls
+// Second offset is at end of L balls (after XL's)
+// Third offset is at end of M balls (right before S's at the end)
+// Fourth offset is the end of the strip (end of S's)
+uint16_t ballOffsets[] = {
+    (XL_BALL_LEDS * NUM_XL_BALLS),
+    (XL_BALL_LEDS * NUM_XL_BALLS) + (L_BALL_LEDS * NUM_L_BALLS),
+    NUM_LEDS - (S_BALL_LEDS * NUM_S_BALLS),
+    NUM_LEDS
+};
 
 // ========================
 // Time Syncing Definitions
@@ -39,7 +64,7 @@
 #define FPS 120             // Frames Per Second
 
 // Amount of time to show each pattern
-#define PATTERN_SECS 16
+#define PATTERN_SECS 20
 
 // Amount of time to show each palette
 #define PALETTE_SECS (PATTERN_SECS / 4)
@@ -84,6 +109,7 @@ CHSVPalette16 hsvPalettes[] = {
     OctocatColorsPalette_p
 };
 
+// TODO: Add more color palettes
 CRGBPalette16 rgbPalettes[] = {
     OctocatColorsPalette_p, LavaColors_p, PartyColors_p, OceanColors_p
 };
@@ -434,7 +460,7 @@ void nextPattern() {
 
 void setup() {
     // Initialize the LED Strip.
-    FastLED.addLeds<DOTSTAR>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+    FastLED.addLeds<APA102, BGR>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
 
     // Set the color temperature
     FastLED.setTemperature(CarbonArc);
