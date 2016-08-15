@@ -8,13 +8,16 @@
 // APA102/Dotstar Definitions
 // ================
 
-// SPI Clock Pin on Arduino Zero for APA102 (Dotstar) LED's
-#define CLOCK_PIN 23
-// SPI Data Pin on Arduino Zero For APA102 (Dotstar) LED's
-#define DATA_PIN 24
-// Analog pin that shouldn't have anything plugged into it, and
-// should be used to generate a random seed.
+// Digital Clock Pin For APA102 (Dotstar) Timing
+#define CLOCK_PIN 23  // SPI Clock Pin (Arduino Zero)
+
+// Digital Data Pin For APA102 (Dotstar) Data
+#define DATA_PIN 24  //SPI Data Pin (Arduino Zero)
+
+// Analog Pin used to add entropy to random seed.
+// NOTE: Nothing should be plugged into this pin.
 #define RANDOM_ANALOG_PIN 0
+
 // RGB Order for LED strips
 #define RGB_ORDER BGR
 
@@ -38,44 +41,77 @@
 
 // Number of LED's On Strip
 #define NUM_LEDS 172
+
+// Number of Color Groups throughout LED Strip
+// Works best if it cleanly divides into NUM_LEDS or has a small remainder
 #define NUM_GROUPS 19
 
-// Size of a "group" for certain animations.
+// Size of a color group for certain animations.
 #define LED_GROUP_SIZE ((NUM_LEDS) / (NUM_GROUPS))
 
-// LED Orb Sizes
+// Number of LED's per orb size.
 #define XL_ORB_LEDS 11
 #define L_ORB_LEDS 7
 #define M_ORB_LEDS 5
 #define S_ORB_LEDS 4
+
+// Number of Sizes
 #define ORB_SIZES 4
 
+// Number of each size of orb.
 #define NUM_XL_ORBS 4
 #define NUM_L_ORBS 8
 #define NUM_M_ORBS 8
 #define NUM_S_ORBS 8
+
+// Total number of orbs.
 #define NUM_ORBS ((NUM_XL_ORBS) + (NUM_L_ORBS) + (NUM_M_ORBS) + (NUM_S_ORBS))
+
+// Number of rings.
 #define NUM_RINGS 4
 
-// TODO: Add comments for the rest of the new code.
 // TODO: Add more color palettes
 
+// Starting indexes of each of the orbs.
 uint16_t orbIndexes[NUM_ORBS];
+
+// Number of LED's for each of the orbs
 uint16_t orbSizes[NUM_ORBS];
 
-// XL Ring (0 - 11)
-// L Ring (12 - 21)
-// M Ring (22 - 26)
-// Center (27)
-const uint8_t ringIndexes[] = {0, 12, 22, 27};
-const uint8_t ringSizes[] = {12, 10, 5, 1};
+/*
+ * LED Ring Sizes
+ *
+ * Ring 1: XL Ring (0 - 11)
+ * Ring 2: L Ring (12 - 21)
+ * Ring 3: M Ring (22 - 26)
+ * Ring 4: Center (27)
+ */
+
+#define RING_ONE 0
+#define RING_TWO 12
+#define RING_THREE 22
+#define RING_FOUR 27
+
+// Starting indexes of each of the rings.
+const uint8_t ringIndexes[] = {
+    RING_ONE, RING_TWO, RING_THREE, RING_FOUR
+};
+
+// Sizes of each of the rings
+const uint8_t ringSizes[] = {
+    RING_TWO - RING_ONE,
+    RING_THREE - RING_TWO,
+    RING_FOUR - RING_THREE,
+    NUM_ORBS - RING_FOUR
+};
 
 
 // ========================
 // Time Syncing Definitions
 // ========================
 
-#define FPS 120             // Frames Per Second
+// Frames Per Second
+#define FPS 120
 
 // Amount of time to show each pattern
 #define PATTERN_SECS 24
@@ -86,19 +122,26 @@ const uint8_t ringSizes[] = {12, 10, 5, 1};
 // Amount of time between each hue in rainbow
 #define RAINBOW_MILLIS 20
 
+
+// ================
+// Global Variables
+// ================
+
 // The LED's, man!
 CRGB leds[NUM_LEDS];
 
 // Designates whether the group size is even or odd.
-const boolean IS_GROUP_SIZE_EVEN = LED_GROUP_SIZE % 2 == 0;
+const boolean IS_GROUP_SIZE_EVEN = (LED_GROUP_SIZE) % 2 == 0;
 
 // Designates the "center" index of a given group.
 // For even groups sizes, this is "to the right" of where the center would be.
-const uint16_t GROUP_CENTER = LED_GROUP_SIZE / 2;
+const uint16_t GROUP_CENTER = (LED_GROUP_SIZE) / 2;
 
 // Typedef to make function pointer array easier to type.
 typedef void (*PatternArray[])();
 
+// Typedef for defining the animation type for a given pattern function.
+// Generally used in a switch statement to add variety to existing animations.
 typedef enum {
     RAINBOW_ANIM, GROUP_ANIM, RGB_PALETTE_ANIM, HSV_PALETTE_ANIM
 } AnimationType;
