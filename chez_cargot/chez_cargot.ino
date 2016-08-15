@@ -48,8 +48,6 @@
 #define NUM_RINGS 4
 
 // TODO: Add comments for the rest of the new code.
-// TODO: Fix delay code on comet and converge patterns (low priority - they
-// still look good)
 // TODO: Add more color palettes
 
 uint16_t orbIndexes[NUM_ORBS];
@@ -273,30 +271,37 @@ void beatSyncMultiplesPattern() {
  * Pattern which has multiple trails of LED "comets" moving along the strip.
  */
 void cometPattern(AnimationType animType) {
+    static const uint64_t animationTimeMillis = 50;
+    static uint64_t lastTime = 0;
     static uint16_t offset = 0;
 
-    fadeToBlackBy(leds, NUM_LEDS, 127);
-    for (uint16_t i = offset; i < NUM_LEDS; i += LED_GROUP_SIZE) {
-        switch (animType) {
-            case HSV_PALETTE_ANIM:
-                {
-                    CHSV hsv = ColorFromPalette(
-                        hsvPalettes[currentHSVPalette], getGradientHue(i),
+    uint64_t currentTime = millis();
+
+    fadeToBlackBy(leds, NUM_LEDS, 31);
+
+    if (lastTime + animationTimeMillis <= currentTime) {
+        for (uint16_t i = offset; i < NUM_LEDS; i += LED_GROUP_SIZE) {
+            switch (animType) {
+                case HSV_PALETTE_ANIM:
+                    {
+                        CHSV hsv = ColorFromPalette(
+                            hsvPalettes[currentHSVPalette], getGradientHue(i),
+                            MAX_BRIGHTNESS);
+                        hsv.hue += 16 * offset;
+                        leds[i] = hsv;
+                    }
+                    break;
+                case RGB_PALETTE_ANIM:
+                default:
+                    leds[i] = ColorFromPalette(
+                        rgbPalettes[currentRGBPalette], getGradientHue(i),
                         MAX_BRIGHTNESS);
-                    hsv.hue += 16 * offset;
-                    leds[i] = hsv;
-                }
-                break;
-            case RGB_PALETTE_ANIM:
-            default:
-                leds[i] = ColorFromPalette(
-                    rgbPalettes[currentRGBPalette], getGradientHue(i),
-                    MAX_BRIGHTNESS);
-                break;
+                    break;
+            }
         }
+        offset = (offset + 1) % LED_GROUP_SIZE;
+        lastTime = currentTime;
     }
-    offset = (offset + 1) % LED_GROUP_SIZE;
-    delay(50);
 }
 
 
@@ -320,48 +325,52 @@ void cometPatternHSV() {
  * Pattern that starts from individual points and converges with others
  */
 void convergePattern(AnimationType animType) {
-    static uint8_t dist = 0;
+    static const uint64_t animationTimeMillis = 75;
+    static const uint16_t maxDist = (
+        IS_GROUP_SIZE_EVEN ? GROUP_CENTER - 1: GROUP_CENTER);
+
+    static uint64_t lastTime = 0;
+    static uint16_t dist = 0;
     static boolean goingOut = true;
 
-    uint16_t maxDist = GROUP_CENTER;
-    uint16_t start = GROUP_CENTER - dist;
-    if (IS_GROUP_SIZE_EVEN) {
-        --start;
-        --maxDist;
-    }
-    for (uint16_t i = 0; i < NUM_LEDS; i += LED_GROUP_SIZE) {
-        for (uint16_t j = i + start;
-                j <= i + GROUP_CENTER + dist && j < NUM_LEDS; ++j) {
-            if (goingOut) {
-                switch (animType) {
-                    case HSV_PALETTE_ANIM:
-                        {
-                            CHSV hsv = ColorFromPalette(
-                                hsvPalettes[currentHSVPalette],
+    uint64_t currentTime = millis();
+    uint16_t start = maxDist - dist;
+
+    if (lastTime + animationTimeMillis <= currentTime) {
+        for (uint16_t i = 0; i < NUM_LEDS; i += LED_GROUP_SIZE) {
+            for (uint16_t j = i + start;
+                    j <= i + GROUP_CENTER + dist && j < NUM_LEDS; ++j) {
+                if (goingOut) {
+                    switch (animType) {
+                        case HSV_PALETTE_ANIM:
+                            {
+                                CHSV hsv = ColorFromPalette(
+                                    hsvPalettes[currentHSVPalette],
+                                    getGradientHue(j), DEFAULT_BRIGHTNESS);
+                                hsv.sat = beatsin8(30, MIN_SAT, MAX_SAT);
+                                hsv.hue += 48 * dist;
+                                leds[j] = hsv;
+                            }
+                            break;
+                        case RGB_PALETTE_ANIM:
+                        default:
+                            leds[j] = ColorFromPalette(
+                                rgbPalettes[currentRGBPalette],
                                 getGradientHue(j), DEFAULT_BRIGHTNESS);
-                            hsv.sat = beatsin8(30, MIN_SAT, MAX_SAT);
-                            hsv.hue += 48 * dist;
-                            leds[j] = hsv;
-                        }
-                        break;
-                    case RGB_PALETTE_ANIM:
-                    default:
-                        leds[j] = ColorFromPalette(
-                            rgbPalettes[currentRGBPalette], getGradientHue(j),
-                            DEFAULT_BRIGHTNESS);
-                        break;
+                            break;
+                    }
+                } else {
+                    leds[j] = CRGB::Black;
                 }
-            } else {
-                leds[j] = CRGB::Black;
             }
         }
-    }
 
-    dist = (dist + 1) % (maxDist + 1);
-    if (dist == 0) {
-        goingOut = !goingOut;
+        dist = (dist + 1) % (maxDist + 1);
+        if (dist == 0) {
+            goingOut = !goingOut;
+        }
+        lastTime = currentTime;
     }
-    delay(75);
 }
 
 
