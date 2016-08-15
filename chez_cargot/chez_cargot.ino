@@ -4,9 +4,19 @@
 // Arduino Pin Definitions
 // =======================
 
-// Dotstar LED Pins
-/* #define CLOCK_PIN 4  // Pin for LED Clock (Dotstar) */
-/* #define DATA_PIN 5   // Pin For LED Data (Dotstar) */
+// ================
+// APA102/Dotstar Definitions
+// ================
+
+// SPI Clock Pin on Arduino Zero for APA102 (Dotstar) LED's
+#define CLOCK_PIN 23
+// SPI Data Pin on Arduino Zero For APA102 (Dotstar) LED's
+#define DATA_PIN 24
+// Analog pin that shouldn't have anything plugged into it, and
+// should be used to generate a random seed.
+#define RANDOM_ANALOG_PIN 0
+// RGB Order for LED strips
+#define RGB_ORDER BGR
 
 // ===============
 // HSV Definitions
@@ -138,7 +148,7 @@ const CRGBPalette16 LavaNoBlackColorsPalette_p(
 );
 
 CHSVPalette16 hsvPalettes[] = {
-    ChezCargotColorsPalette_p
+    ChezCargotColorsPalette_p, ChezCargotColorsPalette_p
 };
 
 // TODO: Add more color palettes
@@ -157,15 +167,20 @@ const uint16_t rgbPalettesLength = (
     sizeof(rgbPalettes) / sizeof(rgbPalettes[0]));
 
 
-uint8_t currentPattern = 0;     // Index of currently selected pattern
-uint8_t currentHSVPalette = 0;  // Index of currently selected HSV Palette
-uint8_t currentRGBPalette = 0;  // Index of currently selected RGB Palette
+uint8_t currentPattern;     // Index of currently selected pattern
+uint8_t currentHSVPalette;  // Index of currently selected HSV Palette
+uint8_t currentRGBPalette;  // Index of currently selected RGB Palette
 uint8_t rainbowHue = 0;         // Global value for cycling through hues
 
 
 // =================
 // Utility Functions
 // =================
+
+
+uint16_t generate_entropy() {
+    return (analogRead(RANDOM_ANALOG_PIN) * 65535) / 1023;
+}
 
 
 /*
@@ -726,10 +741,13 @@ void twinklePattern() {
 
 /*
  * Global list of pattern functions.
+ *
  * Each should be the name of a function that has return type void and takes no
- * parameters.
+ * parameters. Some patterns are repeated in order to increase their chances of
+ * showing up when the next pattern is randomly chosen.
  */
 PatternArray patterns = {
+    beatSyncMultiplesPattern,
     beatSyncMultiplesPattern,
     cometPatternHSV,
     cometPatternRGB,
@@ -739,6 +757,8 @@ PatternArray patterns = {
     flowerOrbRGBPattern,
     flowerOrbRainbowPattern,
     glitterPattern,
+    glitterPattern,
+    pulsingPattern,
     pulsingPattern,
     randomOrbsGroupPattern,
     randomOrbsRGBPalettePattern,
@@ -751,6 +771,7 @@ PatternArray patterns = {
     spiralPatternDynamic,
     spiralPatternSteady,
     spiralSteadyInAndOutPattern,
+    twinklePattern,
     twinklePattern
 };
 
@@ -764,23 +785,36 @@ const uint16_t patternsLength = sizeof(patterns) / sizeof(patterns[0]);
 // ========================
 
 /*
- * Increments the index on both the HSV and RGB palette arrays. This should be
- * called in a EVERY_N_SECONDS macro provided by FastLED in order to
- * dynamically change color palettes in patterns.
+ * Randomly changes the index on both the HSV and RGB palette arrays. This
+ * should be called in a EVERY_N_SECONDS macro provided by FastLED in order
+ * to dynamically change color palettes in patterns.
  */
 void nextPalette() {
-    currentRGBPalette = (currentRGBPalette + 1) % rgbPalettesLength;
-    currentHSVPalette = (currentHSVPalette + 1) % hsvPalettesLength;
+    uint8_t newRGBPalette = random8(rgbPalettesLength);
+    while (newRGBPalette == currentRGBPalette) {
+        newRGBPalette = random8(rgbPalettesLength);
+    }
+    currentRGBPalette = newRGBPalette;
+
+    uint8_t newHSVPalette = random8(hsvPalettesLength);
+    while (newHSVPalette == currentHSVPalette) {
+        newHSVPalette = random8(hsvPalettesLength);
+    }
+    currentHSVPalette = newHSVPalette;
 }
 
 
 /*
- * Increments the index of patterns array in order to switch to the next
- * pattern. This should be called in a EVERY_N_SECONDS macro provided by
+ * Randomly changes the index of the patterns array in order to switch to the
+ * next pattern. This should be called in an EVERY_N_SECONDS macro provided by
  * FastLED in order to dynamically change patterns.
  */
 void nextPattern() {
-    currentPattern = random8(patternsLength);
+    uint8_t newPattern = random8(patternsLength);
+    while (newPattern == currentPattern) {
+        newPattern = random8(patternsLength);
+    }
+    currentPattern = newPattern;
 }
 
 
@@ -790,16 +824,31 @@ void nextPattern() {
 
 
 void setup() {
+    // Add some entropy to initial random FastLED seed
+    random16_add_entropy(generate_entropy());
+
+    // Initialize orb indexes
+    setupOrbIndexes();
+
+    // Initialize starting patterns and palettes
+    currentPattern = random8(patternsLength);
+    currentHSVPalette = random8(hsvPalettesLength);
+    currentRGBPalette = random8(rgbPalettesLength);
+
     // Initialize the LED Strip.
-    FastLED.addLeds<APA102, BGR>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+    // Uses Implicit SPI Pins From FastLED
+    FastLED.addLeds<APA102, RGB_ORDER>(
+        leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+
+    // For Use With Explicit Clock and Data
+    /* FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB_ORDER>( */
+    /*     leds, NUM_LEDS).setCorrection(TypicalSMD5050); */
 
     // Set the color temperature
     FastLED.setTemperature(CarbonArc);
 
     // Set the global brightness
     FastLED.setBrightness(DEFAULT_BRIGHTNESS);
-
-    setupOrbIndexes();
 }
 
 
