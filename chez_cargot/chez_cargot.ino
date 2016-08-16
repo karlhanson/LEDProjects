@@ -776,6 +776,12 @@ void ringsPattern(AnimationType animType) {
             for (uint8_t j = startLED; j < endLED; ++j) {
                 phaseOffset = ringNum * 32;
                 switch(animType) {
+                    case GROUP_ANIM:
+                        leds[j] = ColorFromPalette(
+                            rgbPalettes[currentRGBPalette],
+                            getGroupHue(j) + (ringNum * 16),
+                            beatsin8(60, 0, MAX_BRIGHTNESS, 0, phaseOffset));
+                        break;
                     case RGB_PALETTE_ANIM:
                         leds[j] = ColorFromPalette(
                             rgbPalettes[currentRGBPalette],
@@ -802,6 +808,10 @@ void ringsRainbowPattern() {
 
 void ringsRGBPattern() {
     ringsPattern(RGB_PALETTE_ANIM);
+}
+
+void ringsGroupPattern() {
+    ringsPattern(GROUP_ANIM);
 }
 
 
@@ -934,6 +944,7 @@ PatternArray patterns = {
     randomOrbsRainbowPattern,
     randomSparklesGroupPattern,
     randomSparklesRainbowPattern,
+    ringsGroupPattern,
     ringsRGBPattern,
     ringsRainbowPattern,
     spiralDynamicInAndOutPattern,
