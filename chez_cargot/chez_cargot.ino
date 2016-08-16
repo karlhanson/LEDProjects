@@ -73,8 +73,6 @@
 // Number of rings.
 #define NUM_RINGS 4
 
-// TODO: Add more color palettes
-
 // Starting indexes of each of the orbs.
 uint16_t orbIndexes[NUM_ORBS];
 
@@ -193,6 +191,111 @@ const CHSVPalette16 ChezCargotColorsPalette_p(
     CHSV(42, DEFAULT_SAT, MAX_BRIGHTNESS)
 );
 
+// Inspired by colors of a sunset
+const CHSVPalette16 SKOneHSVPalette_p(
+    CHSV(6, 161, 223),
+    CHSV(217, 178, 141),
+    CHSV(8, 156, 247),
+    CHSV(163, 226, 71),
+    CHSV(251, 127, 231),
+    CHSV(163, 226, 100),
+    CHSV(233, 152, 197),
+    CHSV(169, 217, 121),
+    CHSV(220, 173, 154),
+    CHSV(207, 196, 112),
+    CHSV(203, 207, 96),
+    CHSV(253, 120, 237),
+    CHSV(163, 255, 89),
+    CHSV(242, 135, 216),
+    CHSV(169, 217, 121),
+    CHSV(233, 156, 218)
+);
+
+// Inspired by colors of a sunset
+const CHSVPalette16 SKTwoHSVPalette_p(
+    CHSV(6, DEFAULT_SAT, 223),
+    CHSV(217, DEFAULT_SAT, 141),
+    CHSV(8, DEFAULT_SAT, 247),
+    CHSV(163, DEFAULT_SAT, 71),
+    CHSV(251, DEFAULT_SAT, 231),
+    CHSV(163, DEFAULT_SAT, 100),
+    CHSV(233, DEFAULT_SAT, 197),
+    CHSV(169, DEFAULT_SAT, 121),
+    CHSV(220, DEFAULT_SAT, 154),
+    CHSV(207, DEFAULT_SAT, 112),
+    CHSV(203, DEFAULT_SAT, 96),
+    CHSV(253, DEFAULT_SAT, 237),
+    CHSV(163, DEFAULT_SAT, 89),
+    CHSV(242, DEFAULT_SAT, 216),
+    CHSV(169, DEFAULT_SAT, 121),
+    CHSV(233, DEFAULT_SAT, 218)
+);
+
+// Blue and Purple Palette with a bit of de-saturated reds
+const CHSVPalette16 SKThreeHSVPalette_p(
+    CHSV(142, 236, 254),
+    CHSV(146, 236, 254),
+    CHSV(151, 236, 254),
+    CHSV(154, 236, 254),
+    CHSV(159, 236, 254),
+    CHSV(166, 236, 254),
+    CHSV(173, 236, 254),
+    CHSV(184, 236, 254),
+    CHSV(193, 236, 254),
+    CHSV(204, 170, 242),
+    CHSV(210, 170, 242),
+    CHSV(210, 156, 242),
+    CHSV(234, 156, 242),
+    CHSV(239, 163, 241),
+    CHSV(246, 188, 248),
+    CHSV(251, 188, 248)
+);
+
+// Grass-like colors
+const CHSVPalette16 SKFourHSVPalette_p(
+    CHSV(112, 236, 109),
+    CHSV(112, 221, 109),
+    CHSV(112, 178, 70),
+    CHSV(62, 151, 62),
+    CHSV(50, 255, 70),
+    CHSV(80, 222, 93),
+    CHSV(90, 252, 132),
+    CHSV(70, 252, 161),
+    CHSV(65, 210, 180),
+    CHSV(80, 190, 208),
+    CHSV(66, 190, 208),
+    CHSV(66, 211, 232),
+    CHSV(66, 172, 249),
+    CHSV(56, 172, 249),
+    CHSV(46, 187, 255),
+    CHSV(46, 187, 255)
+);
+
+// Candy Land!
+const CHSVPalette16 SKFiveHSVPalette_p(
+    CHSV(43, 255, 255),
+    CHSV(85, 255, 255),
+    CHSV(124, 255, 255),
+    CHSV(158, 255, 255),
+    CHSV(117, 204, 255),
+    CHSV(190, 204, 255),
+    CHSV(43, 255, 255),
+    CHSV(85, 255, 255),
+    CHSV(124, 255, 255),
+    CHSV(158, 255, 255),
+    CHSV(117, 204, 255),
+    CHSV(190, 204, 255),
+    CHSV(43, 255, 255),
+    CHSV(85, 255, 255),
+    CHSV(124, 255, 255),
+    CHSV(158, 255, 255)
+);
+
+
+// ============
+// RGB Palettes
+// ============
+
 const CRGBPalette16 LavaNoBlackColorsPalette_p(
     CRGB::Crimson,
     CRGB::Maroon,
@@ -215,14 +318,18 @@ const CRGBPalette16 LavaNoBlackColorsPalette_p(
     CRGB::DarkRed
 );
 
+
+// The collection of available HSV Palettes
 CHSVPalette16 hsvPalettes[] = {
-    ChezCargotColorsPalette_p, ChezCargotColorsPalette_p
+    ChezCargotColorsPalette_p, SKOneHSVPalette_p, SKTwoHSVPalette_p,
+    SKThreeHSVPalette_p, SKFourHSVPalette_p, SKFiveHSVPalette_p
 };
 
-// TODO: Add more color palettes
+// The collection of available RGB Palettes
 CRGBPalette16 rgbPalettes[] = {
     ChezCargotColorsPalette_p, LavaNoBlackColorsPalette_p, PartyColors_p,
-    OceanColors_p
+    OceanColors_p, SKOneHSVPalette_p, SKTwoHSVPalette_p, SKThreeHSVPalette_p,
+    SKFourHSVPalette_p, SKFiveHSVPalette_p
 };
 
 
