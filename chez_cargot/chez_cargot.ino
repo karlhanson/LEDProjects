@@ -4,10 +4,6 @@
 // Arduino Pin Definitions
 // =======================
 
-// ================
-// APA102/Dotstar Definitions
-// ================
-
 // Digital Clock Pin For APA102 (Dotstar) Timing
 #define CLOCK_PIN 23  // SPI Clock Pin (Arduino Zero)
 
@@ -18,8 +14,14 @@
 // NOTE: Nothing should be plugged into this pin.
 #define RANDOM_ANALOG_PIN 0
 
+
+// ================
+// APA102/Dotstar Definitions
+// ================
+
 // RGB Order for LED strips
 #define RGB_ORDER BGR
+
 
 // ===============
 // HSV Definitions
@@ -34,6 +36,7 @@
 #define DEFAULT_SAT 223
 #define MIN_SAT 191
 #define MAX_SAT 255
+
 
 // ==========================
 // LED Strip Size Definitions
@@ -123,6 +126,20 @@ const uint8_t ringSizes[] = {
 #define RAINBOW_MILLIS 20
 
 
+// ========
+// Typedefs
+// ========
+
+// Typedef to make function pointer array easier to type.
+typedef void (*PatternArray[])();
+
+// Typedef for defining the animation type for a given pattern function.
+// Generally used in a switch statement to add variety to existing animations.
+typedef enum {
+    RAINBOW_ANIM, GROUP_ANIM, RGB_PALETTE_ANIM, HSV_PALETTE_ANIM
+} AnimationType;
+
+
 // ================
 // Global Variables
 // ================
@@ -137,15 +154,23 @@ const boolean IS_GROUP_SIZE_EVEN = (LED_GROUP_SIZE) % 2 == 0;
 // For even groups sizes, this is "to the right" of where the center would be.
 const uint16_t GROUP_CENTER = (LED_GROUP_SIZE) / 2;
 
-// Typedef to make function pointer array easier to type.
-typedef void (*PatternArray[])();
+uint8_t currentPattern;     // Index of currently selected pattern
+uint8_t currentHSVPalette;  // Index of currently selected HSV Palette
+uint8_t currentRGBPalette;  // Index of currently selected RGB Palette
+uint8_t rainbowHue = 0;     // Global value for cycling through hues
 
-// Typedef for defining the animation type for a given pattern function.
-// Generally used in a switch statement to add variety to existing animations.
-typedef enum {
-    RAINBOW_ANIM, GROUP_ANIM, RGB_PALETTE_ANIM, HSV_PALETTE_ANIM
-} AnimationType;
 
+// TODO: Add more color palettes
+// ============
+// HSV Palettes
+// ============
+
+/*
+ * Chez Cargot Colors
+ * A variety of dynamic colors that move across the color hue wheel in 1/6ths
+ * with a few colors wrapping around, having a mixed sorting order that
+ * encourages similar colors to be spread out.
+ */
 const CHSVPalette16 ChezCargotColorsPalette_p(
     CHSV(0, DEFAULT_SAT, MAX_BRIGHTNESS),
     CHSV(127, DEFAULT_SAT, MAX_BRIGHTNESS),
@@ -208,12 +233,6 @@ const uint16_t hsvPalettesLength = (
 // Length of rgbPalettes[]
 const uint16_t rgbPalettesLength = (
     sizeof(rgbPalettes) / sizeof(rgbPalettes[0]));
-
-
-uint8_t currentPattern;     // Index of currently selected pattern
-uint8_t currentHSVPalette;  // Index of currently selected HSV Palette
-uint8_t currentRGBPalette;  // Index of currently selected RGB Palette
-uint8_t rainbowHue = 0;         // Global value for cycling through hues
 
 
 // =================
