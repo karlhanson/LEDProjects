@@ -1,5 +1,6 @@
 #include <FastLED.h>
 
+
 // =======================
 // Arduino Pin Definitions
 // =======================
@@ -158,13 +159,13 @@ uint8_t currentRGBPalette;  // Index of currently selected RGB Palette
 uint8_t rainbowHue = 0;     // Global value for cycling through hues
 
 
-// TODO: Add more color palettes
 // ============
 // HSV Palettes
 // ============
 
 /*
  * Chez Cargot Colors
+ *
  * A variety of dynamic colors that move across the color hue wheel in 1/6ths
  * with a few colors wrapping around, having a mixed sorting order that
  * encourages similar colors to be spread out.
@@ -191,8 +192,12 @@ const CHSVPalette16 ChezCargotColorsPalette_p(
     CHSV(42, DEFAULT_SAT, MAX_BRIGHTNESS)
 );
 
-// Inspired by colors of a sunset
-const CHSVPalette16 SKOneHSVPalette_p(
+/*
+ * SK Sunset Palette
+ *
+ * A variety of colors picked from a photograph of a sunset.
+ */
+const CHSVPalette16 SKSunsetPalette_p(
     CHSV(6, 161, 223),
     CHSV(217, 178, 141),
     CHSV(8, 156, 247),
@@ -211,8 +216,12 @@ const CHSVPalette16 SKOneHSVPalette_p(
     CHSV(233, 156, 218)
 );
 
-// Inspired by colors of a sunset
-const CHSVPalette16 SKTwoHSVPalette_p(
+/*
+ * SK Saturated Sunset Palette
+ *
+ * Features the same colors as the sunset palette, but with higher saturation.
+ */
+const CHSVPalette16 SKSaturatedSunsetPalette_p(
     CHSV(6, DEFAULT_SAT, 223),
     CHSV(217, DEFAULT_SAT, 141),
     CHSV(8, DEFAULT_SAT, 247),
@@ -231,8 +240,15 @@ const CHSVPalette16 SKTwoHSVPalette_p(
     CHSV(233, DEFAULT_SAT, 218)
 );
 
-// Blue and Purple Palette with a bit of de-saturated reds
-const CHSVPalette16 SKThreeHSVPalette_p(
+
+/*
+ * SK Blue, Purple, and Red Palette
+ *
+ * Features a variety of blue and purple colors, with notes of de-saturated
+ * reds. Was initially inspired by a photo of a flower, and was worked
+ * extensively from there.
+ */
+const CHSVPalette16 SKBPRPalette_p(
     CHSV(142, 236, 254),
     CHSV(146, 236, 254),
     CHSV(151, 236, 254),
@@ -251,8 +267,14 @@ const CHSVPalette16 SKThreeHSVPalette_p(
     CHSV(251, 188, 248)
 );
 
-// Grass-like colors
-const CHSVPalette16 SKFourHSVPalette_p(
+
+/*
+ * SK Grass Palette
+ *
+ * Features a variety of colors found on grass, including many pigments of
+ * green with hints of yellow.
+ */
+const CHSVPalette16 SKGrassPalette_p(
     CHSV(112, 236, 109),
     CHSV(112, 221, 109),
     CHSV(112, 178, 70),
@@ -271,7 +293,13 @@ const CHSVPalette16 SKFourHSVPalette_p(
     CHSV(46, 187, 255)
 );
 
-// Candy Land!
+
+/*
+ * SK Candy Land Palette
+ *
+ * A variety of bright and saturated colors that were very bright and candy
+ * like - specifically targeting high saturation to look good with the LED's.
+ */
 const CHSVPalette16 SKFiveHSVPalette_p(
     CHSV(43, 255, 255),
     CHSV(85, 255, 255),
@@ -296,6 +324,12 @@ const CHSVPalette16 SKFiveHSVPalette_p(
 // RGB Palettes
 // ============
 
+/*
+ * Lava Colors (No Blacks) Palette
+ *
+ * A modification of FastLED's LavaColors palette, except replacing blacks with
+ * other shades of red and orange.
+ */
 const CRGBPalette16 LavaNoBlackColorsPalette_p(
     CRGB::Crimson,
     CRGB::Maroon,
@@ -321,17 +355,16 @@ const CRGBPalette16 LavaNoBlackColorsPalette_p(
 
 // The collection of available HSV Palettes
 CHSVPalette16 hsvPalettes[] = {
-    ChezCargotColorsPalette_p, SKOneHSVPalette_p, SKTwoHSVPalette_p,
-    SKThreeHSVPalette_p, SKFourHSVPalette_p, SKFiveHSVPalette_p
+    ChezCargotColorsPalette_p, SKSunsetPalette_p, SKSaturatedSunsetPalette_p,
+    SKBPRPalette_p, SKGrassPalette_p, SKFiveHSVPalette_p
 };
 
 // The collection of available RGB Palettes
 CRGBPalette16 rgbPalettes[] = {
     ChezCargotColorsPalette_p, LavaNoBlackColorsPalette_p, PartyColors_p,
-    OceanColors_p, SKOneHSVPalette_p, SKTwoHSVPalette_p, SKThreeHSVPalette_p,
-    SKFourHSVPalette_p, SKFiveHSVPalette_p
+    OceanColors_p, SKSunsetPalette_p, SKSaturatedSunsetPalette_p,
+    SKBPRPalette_p, SKGrassPalette_p, SKFiveHSVPalette_p
 };
-
 
 // Length of hsvPalettes[]
 const uint16_t hsvPalettesLength = (
@@ -347,10 +380,16 @@ const uint16_t rgbPalettesLength = (
 // =================
 
 
+/*
+ * Returns a random amount of entropy using an unused analogPin's input.
+ *
+ * Takes the read value of an unused analog pin, and scales it to a 16 byte
+ * range. This allows the order of animations and palettes to be more random
+ * upon first turning on the lights.
+ */
 uint16_t generate_entropy() {
     return (analogRead(RANDOM_ANALOG_PIN) * 65535) / 1023;
 }
-
 
 /*
  * Returns a hue index that corresponds with the given LED index.
@@ -363,7 +402,6 @@ uint16_t generate_entropy() {
 uint8_t getGradientHue(uint16_t led) {
     return (led * 255) / (NUM_LEDS - 1);
 }
-
 
 /*
  * Returns a hue index that corresponds to the group index of the given LED.
@@ -382,6 +420,9 @@ uint8_t getGroupHue(uint16_t led) {
 }
 
 
+/*
+ * Sets up the starting indexes and sizes of each orb in the installation.
+ */
 void setupOrbIndexes() {
     uint8_t orbSizeTypes[] = {XL_ORB_LEDS, L_ORB_LEDS, M_ORB_LEDS, S_ORB_LEDS};
 
@@ -567,7 +608,7 @@ void convergePatternRGB() {
 
 
 /*
- * See convergePattern, uses RGB Palettes.
+ * See convergePattern, uses HSV Palettes.
  */
 void convergePatternHSV() {
     convergePattern(HSV_PALETTE_ANIM);
