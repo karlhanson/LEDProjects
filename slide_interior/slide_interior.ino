@@ -7,6 +7,7 @@ const uint8_t DATA_PIN = 5;
 const uint8_t DATA_PIN2 = 10;
 const uint8_t DATA_PIN3 = 8;
 const uint8_t MOTION_SENSOR_PIN = 2;
+const uint8_t SEND_INCREMENT = 6; // Pin connected to Slide Ride Counter
 
 const uint16_t NUM_LEDS = (5 * 30);
 //const uint16_t NUM_LEDS = 153;
@@ -609,6 +610,9 @@ void loop() {
   Serial.println(val);
   if(val == HIGH) {
     doNextSketch();
+    digitalWrite(sendIncrement, HIGH);
+    delay(150);
+    digitalWrite(sendIncrement, LOW);
   }
 //  if(val == HIGH && prevState == LOW) {
 //    prevState = HIGH;
